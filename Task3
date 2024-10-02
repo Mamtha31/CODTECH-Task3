@@ -1,0 +1,159 @@
+/*index.html*/
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Weather Dashboard</h1>
+        <div class="search">
+            <input type="text" id="city-input" placeholder="Enter city name..." />
+            <button id="search-btn">Search</button>
+        </div>
+        <div id="weather" class="weather-info"></div>
+        <div id="forecast" class="forecast-info"></div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
+/*style.css*/
+body {
+    font-family: Arial, sans-serif;
+    background: #f0f0f0;
+    margin: 0;
+    padding: 0;
+}
+
+.container {
+    max-width: 600px;
+    margin: 50px auto;
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+h1 {
+    text-align: center;
+}
+
+.search {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 20px;
+}
+
+input {
+    padding: 10px;
+    width: 70%;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+}
+
+button {
+    padding: 10px;
+    margin-left: 10px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.weather-info, .forecast-info {
+    margin-top: 20px;
+}
+
+.weather-info img {
+    width: 100px;
+}
+
+.forecast-info {
+    display: flex;
+    justify-content: space-around;
+    margin-top: 20px;
+}
+
+.forecast {
+    text-align: center;
+    padding: 10px;
+    background: #e7f3ff;
+    border-radius: 5px;
+}
+/*script.js*/
+const apiKey = 'YOUR_API_KEY'; // Replace with your OpenWeatherMap API key
+const searchButton = document.getElementById('search-btn');
+const cityInput = document.getElementById('city-input');
+const weatherContainer = document.getElementById('weather');
+const forecastContainer = document.getElementById('forecast');
+
+// Fetch current weather data
+async function fetchWeather(city) {
+    const response = await fetch(`https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${apiKey}&units=metric`);
+    if (!response.ok) {
+        throw new Error('City not found');
+    }
+    return response.json();
+}
+
+// Fetch forecast data
+async function fetchForecast(lat, lon) {
+    const response = await fetch(`https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&appid=${apiKey}&units=metric`);
+    if (!response.ok) {
+        throw new Error('Forecast data not available');
+    }
+    return response.json();
+}
+
+// Display weather data
+function displayWeather(data) {
+    const { name, main, weather, wind } = data;
+    const weatherHTML = `
+        <h2>${name}</h2>
+        <p>Temperature: ${main.temp}°C</p>
+        <p>Weather: ${weather[0].description}</p>
+        <img src="http://openweathermap.org/img/wn/${weather[0].icon}.png" alt="${weather[0].description}" />
+        <p>Wind Speed: ${wind.speed} m/s</p>
+    `;
+    weatherContainer.innerHTML = weatherHTML;
+}
+
+// Display forecast data
+function displayForecast(data) {
+    const forecastHTML = data.list
+        .filter((entry, index) => index % 8 === 0) // Get daily forecast (every 8th entry)
+        .map(entry => `
+            <div class="forecast">
+                <h3>${new Date(entry.dt * 1000).toLocaleDateString()}</h3>
+                <p>Temperature: ${entry.main.temp}°C</p>
+                <img src="http://openweathermap.org/img/wn/${entry.weather[0].icon}.png" alt="${entry.weather[0].description}" />
+                <p>${entry.weather[0].description}</p>
+            </div>
+        `)
+        .join('');
+    forecastContainer.innerHTML = forecastHTML;
+}
+
+// Handle search
+async function handleSearch() {
+    const city = cityInput.value;
+    if (!city) return;
+
+    try {
+        const weatherData = await fetchWeather(city);
+        displayWeather(weatherData);
+        
+        const { coord } = weatherData;
+        const forecastData = await fetchForecast(coord.lat, coord.lon);
+        displayForecast(forecastData);
+    } catch (error) {
+        alert(error.message);
+    }
+}
+
+// Add event listener
+searchButton.addEventListener('click', handleSearch);
